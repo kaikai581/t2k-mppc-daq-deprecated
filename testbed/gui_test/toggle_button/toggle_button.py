@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-ZetCode PyQt5 tutorial
+ZetCode PySide2 tutorial
 
 In this example, we create three toggle buttons.
 They will control the background color of a
@@ -11,10 +11,13 @@ Author: Jan Bodnar
 Website: zetcode.com
 """
 
-from PyQt5.QtWidgets import (QWidget, QPushButton,
+from PySide2.QtWidgets import (QWidget, QPushButton,
                              QFrame, QApplication)
-from PyQt5.QtGui import QColor
+from PySide2.QtWidgets import QMainWindow, QStyleFactory
+from PySide2.QtGui import QColor
 import sys
+
+from ui_dashboard_test import Ui_MainWindow
 
 
 class Example(QWidget):
@@ -74,10 +77,27 @@ class Example(QWidget):
         self.square.setStyleSheet("QFrame { background-color: %s }" %
                                   self.col.name())
 
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.initUI()
+
+    def initUI(self):
+        self.ui.powerSwitch.setCheckable(True)
+        self.ui.powerSwitch.clicked[bool].connect(self.setColor)
+    
+    def setColor(self, pressed):
+        if pressed:
+            self.ui.lineEditVoltagePower.setText('10')
+        else:
+            self.ui.lineEditVoltagePower.setText('')
 
 def main():
     app = QApplication(sys.argv)
-    ex = Example()
+    window = MainWindow()
+    window.show()
     sys.exit(app.exec_())
 
 
