@@ -2,9 +2,7 @@
 
 import sys
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QGridLayout, QGroupBox,
-                             QMenu, QPushButton, QRadioButton, QVBoxLayout,
-                             QWidget)
+from PyQt5.QtWidgets import *
 
 
 class Window(QWidget):
@@ -16,6 +14,9 @@ class Window(QWidget):
         grid.addWidget(self.createExampleGroup(), 1, 0)
         # grid.addWidget(self.createExampleGroup(), 0, 1)
         grid.addWidget(self.createExampleGroup(), 1, 1)
+        grid.addWidget(QTextEdit(), 2, 0, 1, 2)
+        self.msgBox = grid.itemAt(3).widget()
+        self.msgBox.setText('hi')
         self.setLayout(grid)
 
         self.setWindowTitle("MPPC DAQ Control App")

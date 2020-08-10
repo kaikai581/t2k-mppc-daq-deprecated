@@ -1,7 +1,13 @@
+#include <iostream>
+#include <zmq.hpp>
+
 #include <TGButton.h>
 #include <TGFrame.h>
 #include <TGLabel.h>
 #include <TGTextEntry.h>
+#include <TPython.h>
+#include <TROOT.h>
+#include <TSystem.h>
 #include <TVirtualX.h>
 #include <RQ_OBJECT.h>
 
@@ -161,8 +167,22 @@ void MyMainFrame::FetchPyqtApp()
     // Source:
     // https://root-forum.cern.ch/t/dialogue-box/1511/5
     // Testing a dialog box
-    new MyDialog(gClient->GetRoot(), fMain, 400, 200);
-    Printf("Create MyDialog window...");
+    // new MyDialog(gClient->GetRoot(), fMain, 400, 200);
+    // Printf("Create MyDialog window...");
+
+    // TPython::ExecScript("main_control.py");
+    // gSystem->Exec("printenv | ack -i conda"); // check environment
+    // gROOT->ProcessLine(".! python main_control.py &");
+
+    // same as TROOT::ProcessLine but more elegant
+    gSystem->Exec("python main_control.py &");
+
+    // below is code to get terminal output
+    TString s = gSystem->GetFromPipe("printenv | ack -i conda");
+    // std::cout << s.Data() << std::endl;
+
+    // below is to test zeromq messaging
+    zmq::context_t context(1);
 }
 
 void fetch_python_gui()
