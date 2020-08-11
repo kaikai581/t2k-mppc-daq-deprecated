@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import sys
+sys.path.append('../../agilent-n6700b-power-system')
+from N6700B import N6700B
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 
@@ -9,14 +11,19 @@ class Window(QWidget):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
 
-        grid = QGridLayout()
-        grid.addWidget(self.createExampleGroup(), 0, 0, 1, 2)
-        grid.addWidget(self.createExampleGroup(), 1, 0)
-        # grid.addWidget(self.createExampleGroup(), 0, 1)
-        grid.addWidget(self.createExampleGroup(), 1, 1)
-        grid.addWidget(QTextEdit(), 2, 0, 1, 2)
-        self.msgBox = grid.itemAt(3).widget()
+        # widgets I want to have control
+        self.voltageSwitch = QPushButton(text='Switch On')
+        self.voltageSwitch.setCheckable(True)
+        # self.voltageSwitch.toggle()
+        self.msgBox = QTextEdit()
         self.msgBox.setText('hi')
+
+        grid = QGridLayout()
+        grid.addWidget(self.createVoltageControl(), 0, 0, 1, 2)
+        # grid.addWidget(self.createExampleGroup(), 1, 0)
+        # grid.addWidget(self.createExampleGroup(), 0, 1)
+        # grid.addWidget(self.createExampleGroup(), 1, 1)
+        grid.addWidget(self.msgBox, 2, 0, 1, 2)
         self.setLayout(grid)
 
         self.setWindowTitle("MPPC DAQ Control App")
@@ -37,6 +44,20 @@ class Window(QWidget):
         vbox.addWidget(radio3)
         vbox.addStretch(1)
         groupBox.setLayout(vbox)
+
+        return groupBox
+
+    def createVoltageControl(self):
+        groupBox = QGroupBox("Voltage Control")
+
+        grid = QGridLayout()
+        grid.addWidget(QLabel('Voltage Set: '), 0, 0, Qt.AlignRight)
+        grid.addWidget(QLineEdit(), 0, 1)
+        grid.addWidget(QLabel('Voltage Read: '), 1, 0, Qt.AlignRight)
+        grid.addWidget(QLineEdit(), 1, 1)
+        grid.addWidget(self.voltageSwitch, 2, 2)
+
+        groupBox.setLayout(grid)
 
         return groupBox
 
