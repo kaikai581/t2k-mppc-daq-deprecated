@@ -117,24 +117,44 @@ class MyMainFrame
     RQ_OBJECT("MyMainFrame")
 private:
     TGMainFrame *fMain;
+    TGTextEntry *edt_msg;
+
+    // zmq variables
+    zmq::context_t fContext;
+    zmq::socket_t fSocket;
 
 public:
     MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h);
     virtual ~MyMainFrame();
     void FetchPyqtApp();
+    void SendMessage();
 };
 
 MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
+    : fContext(1), fSocket(fContext, zmq::socket_type::pair)
 {
+    // zmq business
+    fSocket.bind("tcp://*:5556");
+
     // Create a main frame
     fMain = new TGMainFrame(p, w, h);
 
     // Create a horizontal frame widget with buttons
     TGHorizontalFrame *hframe = new TGHorizontalFrame(fMain, 200, 40);
+    edt_msg = new TGTextEntry(hframe);
+    hframe->AddFrame(edt_msg, new TGLayoutHints(kLHintsCenterX, 5, 5, 3, 4));
+
+    // add a send message button
+    TGTextButton *btn_send = new TGTextButton(hframe, "Send");
+    btn_send->Connect("Clicked()", "MyMainFrame", this, "SendMessage()");
+    hframe->AddFrame(btn_send, new TGLayoutHints(kLHintsCenterX,
+                                                 5, 5, 3, 4));
+
     TGTextButton *fetch = new TGTextButton(hframe, "&Fetch");
     fetch->Connect("Clicked()", "MyMainFrame", this, "FetchPyqtApp()");
     hframe->AddFrame(fetch, new TGLayoutHints(kLHintsCenterX,
                                               5, 5, 3, 4));
+
     TGTextButton *exit = new TGTextButton(hframe, "&Exit",
                                           "gApplication->Terminate(0)");
     hframe->AddFrame(exit, new TGLayoutHints(kLHintsCenterX,
@@ -180,9 +200,15 @@ void MyMainFrame::FetchPyqtApp()
     // below is code to get terminal output
     TString s = gSystem->GetFromPipe("printenv | ack -i conda");
     // std::cout << s.Data() << std::endl;
+}
 
-    // below is to test zeromq messaging
-    zmq::context_t context(1);
+void MyMainFrame::SendMessage()
+{
+    std::string msg(edt_msg->GetText());
+    //  Send reply back to client
+    zmq::message_t reply(msg.length());
+    memcpy(reply.data(), msg.c_str(), msg.length());
+    fSocket.send(reply, zmq::send_flags::none);
 }
 
 void fetch_python_gui()

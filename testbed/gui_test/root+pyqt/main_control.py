@@ -2,14 +2,37 @@
 
 import sys
 sys.path.append('../../agilent-n6700b-power-system')
+import threading
+import zmq
 from N6700B import N6700B
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import *
 
+# For a GUI application, the receiver needs to run in a separate thread for
+# not blocking the app. Ref:
+# https://stackoverflow.com/questions/62898418/how-to-display-an-output-from-zmq-to-a-qt-gui-in-run-time
+class ZMQReceiver(QObject):
+    dataChanged = pyqtSignal(bytes)
+
+    def start(self):
+        threading.Thread(target=self._execute, daemon=True).start()
+
+    def _execute(self):
+        context = zmq.Context()
+        consumer_receiver = context.socket(zmq.PAIR)
+        consumer_receiver.connect("tcp://localhost:5556")
+        while True:
+            buff = consumer_receiver.recv()
+            self.dataChanged.emit(buff)
 
 class Window(QWidget):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
+
+        # zmq business
+        zmq_receiver = ZMQReceiver(self)
+        zmq_receiver.dataChanged.connect(self.on_data_changed)
+        zmq_receiver.start()
 
         # widgets I want to have control
         self.voltageSwitch = QPushButton(text='Switch On')
@@ -18,34 +41,24 @@ class Window(QWidget):
         self.msgBox = QTextEdit()
         self.msgBox.setText('hi')
 
+        # Initialize tab screen
+        self.tabs = QTabWidget()
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+        # Add tabs
+        self.tabs.addTab(self.tab1, 'Simple Control')
+        self.tabs.addTab(self.tab2, 'Parameter Scan')
+        self.tab1.layout = QVBoxLayout(self)
+        self.tab1.layout.addWidget(self.createVoltageControl())
+        self.tab1.setLayout(self.tab1.layout)
+
         grid = QGridLayout()
-        grid.addWidget(self.createVoltageControl(), 0, 0, 1, 2)
-        # grid.addWidget(self.createExampleGroup(), 1, 0)
-        # grid.addWidget(self.createExampleGroup(), 0, 1)
-        # grid.addWidget(self.createExampleGroup(), 1, 1)
+        grid.addWidget(self.tabs, 0, 0, 1, 2)
         grid.addWidget(self.msgBox, 2, 0, 1, 2)
         self.setLayout(grid)
 
         self.setWindowTitle("MPPC DAQ Control App")
         self.resize(400, 300)
-
-    def createExampleGroup(self):
-        groupBox = QGroupBox("Best Food")
-
-        radio1 = QRadioButton("&Radio pizza")
-        radio2 = QRadioButton("R&adio taco")
-        radio3 = QRadioButton("Ra&dio burrito")
-
-        radio1.setChecked(True)
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(radio1)
-        vbox.addWidget(radio2)
-        vbox.addWidget(radio3)
-        vbox.addStretch(1)
-        groupBox.setLayout(vbox)
-
-        return groupBox
 
     def createVoltageControl(self):
         groupBox = QGroupBox("Voltage Control")
@@ -60,6 +73,11 @@ class Window(QWidget):
         groupBox.setLayout(grid)
 
         return groupBox
+    
+    @pyqtSlot(bytes)
+    def on_data_changed(self, buff):
+        text = '\n'.join([self.msgBox.toPlainText(), buff.decode('utf-8')])
+        self.msgBox.setText(text)
 
 
 if __name__ == '__main__':
