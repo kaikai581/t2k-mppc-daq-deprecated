@@ -2,9 +2,11 @@
 
 import sys
 sys.path.append('../../agilent-n6700b-power-system')
+import os
 import threading
 import zmq
 from N6700B import N6700B
+from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import *
 
@@ -37,9 +39,10 @@ class Window(QWidget):
         # widgets I want to have control
         self.voltageSwitch = QPushButton(text='Switch On')
         self.voltageSwitch.setCheckable(True)
-        # self.voltageSwitch.toggle()
         self.msgBox = QTextEdit()
         self.msgBox.setText('hi')
+        # push button for sending message
+        self.btnSendMsg = QPushButton(text='Send')
 
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -55,10 +58,28 @@ class Window(QWidget):
         grid = QGridLayout()
         grid.addWidget(self.tabs, 0, 0, 1, 2)
         grid.addWidget(self.msgBox, 2, 0, 1, 2)
+        grid.addWidget(self.createSendMessage(), 3, 0, 1, 2)
         self.setLayout(grid)
 
         self.setWindowTitle("MPPC DAQ Control App")
         self.resize(400, 300)
+
+        # use a figure as this app's icon
+        # ref: https://stackoverflow.com/questions/42602713/how-to-set-a-window-icon-with-pyqt5
+        scriptDir = os.path.dirname(os.path.realpath(__file__))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(scriptDir, 'logo.png')))
+
+
+    def createSendMessage(self):
+        groupBox = QGroupBox('Send Message')
+
+        grid = QGridLayout()
+        grid.addWidget(QLineEdit(), 0, 0)
+        grid.addWidget(self.btnSendMsg, 0, 1)
+
+        groupBox.setLayout(grid)
+
+        return groupBox
 
     def createVoltageControl(self):
         groupBox = QGroupBox("Voltage Control")
