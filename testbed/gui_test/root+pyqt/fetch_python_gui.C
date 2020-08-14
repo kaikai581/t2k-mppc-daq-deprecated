@@ -8,6 +8,7 @@
 #include <TPython.h>
 #include <TROOT.h>
 #include <TSystem.h>
+#include <TThread.h>
 #include <TVirtualX.h>
 #include <RQ_OBJECT.h>
 
@@ -118,6 +119,7 @@ class MyMainFrame
 private:
     TGMainFrame *fMain;
     TGTextEntry *edt_msg;
+    TThread*     fMsgThread;
 
     // zmq variables
     zmq::context_t fContext;
@@ -128,13 +130,16 @@ public:
     virtual ~MyMainFrame();
     void FetchPyqtApp();
     void SendMessage();
+    static void* receiveFunction(void *arg);
 };
 
 MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
-    : fContext(1), fSocket(fContext, zmq::socket_type::pair)
+    : fContext(1), fSocket(fContext, zmq::socket_type::pair), fMsgThread(0)
 {
     // zmq business
-    fSocket.bind("tcp://*:5556");
+    // fSocket.bind("tcp://*:5556");
+    fMsgThread = new TThread("MsgThread", (void(*)(void*))&receiveFunction, (void*)this);
+    fMsgThread->Run();
 
     // Create a main frame
     fMain = new TGMainFrame(p, w, h);
@@ -200,6 +205,14 @@ void MyMainFrame::FetchPyqtApp()
     // below is code to get terminal output
     TString s = gSystem->GetFromPipe("printenv | ack -i conda");
     // std::cout << s.Data() << std::endl;
+}
+
+void* MyMainFrame::receiveFunction(void* arg)
+{
+    // MyMainFrame *main = (MyMainFrame *)arg;
+    // main->fSocket.bind("tcp://*:5556");
+    std::cout << "hi" << std::endl;
+    return 0;
 }
 
 void MyMainFrame::SendMessage()
