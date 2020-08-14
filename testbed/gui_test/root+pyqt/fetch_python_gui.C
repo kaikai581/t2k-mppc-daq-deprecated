@@ -139,7 +139,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     : fContext(1), fSocket(fContext, zmq::socket_type::pair), fMsgThread(0)
 {
     // zmq business
-    // fSocket.bind("tcp://*:5556");
+    fSocket.bind("tcp://*:5556");
     fMsgThread = new TThread("MsgThread", (void(*)(void*))&receiveFunction, (void*)this);
     fMsgThread->Run();
 
@@ -171,7 +171,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 
     // Create another horizontal frame widget with a text edit
     TGVerticalFrame *vframe = new TGVerticalFrame(fMain, 200, 160);
-    fMsgDisplay = new TGTextEdit(vframe, 260, 120);
+    fMsgDisplay = new TGTextEdit(vframe, 260, 120, kSunkenFrame | kDoubleBorder);
     vframe->AddFrame(fMsgDisplay, new TGLayoutHints(kLHintsCenterX,
                                                     5, 5, 3, 4));
     fMain->AddFrame(vframe, new TGLayoutHints(kLHintsCenterX,
@@ -220,8 +220,21 @@ void MyMainFrame::FetchPyqtApp()
 void* MyMainFrame::receiveFunction(void* arg)
 {
     MyMainFrame *main = (MyMainFrame *)arg;
-    main->fSocket.bind("tcp://*:5556");
+    // main->fSocket.bind("tcp://*:5556");
     std::cout << "hi" << std::endl;
+
+    // start the receiver loop
+    while (true)
+    {
+        zmq::message_t request;
+        // main->fSocket.recv(&request);
+        // std::string rpl = std::string(static_cast<char*>(request.data()), request.size());
+        // main->fMsgDisplay->Clear();
+        // TGText txt;
+        // txt.LoadBuffer(rpl.c_str());
+        // main->fMsgDisplay->AddText(&txt);
+    }
+
     return 0;
 }
 
