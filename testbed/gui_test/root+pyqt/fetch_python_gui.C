@@ -4,6 +4,7 @@
 #include <TGButton.h>
 #include <TGFrame.h>
 #include <TGLabel.h>
+#include <TGTextEdit.h>
 #include <TGTextEntry.h>
 #include <TPython.h>
 #include <TROOT.h>
@@ -119,6 +120,7 @@ class MyMainFrame
 private:
     TGMainFrame *fMain;
     TGTextEntry *edt_msg;
+    TGTextEdit*  fMsgDisplay;
     TThread*     fMsgThread;
 
     // zmq variables
@@ -167,6 +169,14 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     fMain->AddFrame(hframe, new TGLayoutHints(kLHintsCenterX,
                                               2, 2, 2, 2));
 
+    // Create another horizontal frame widget with a text edit
+    TGVerticalFrame *vframe = new TGVerticalFrame(fMain, 200, 160);
+    fMsgDisplay = new TGTextEdit(vframe, 260, 120);
+    vframe->AddFrame(fMsgDisplay, new TGLayoutHints(kLHintsCenterX,
+                                                    5, 5, 3, 4));
+    fMain->AddFrame(vframe, new TGLayoutHints(kLHintsCenterX,
+                                              2, 2, 2, 2));
+
     // Set a name to the main frame
     fMain->SetWindowName("Simple Example");
 
@@ -209,8 +219,8 @@ void MyMainFrame::FetchPyqtApp()
 
 void* MyMainFrame::receiveFunction(void* arg)
 {
-    // MyMainFrame *main = (MyMainFrame *)arg;
-    // main->fSocket.bind("tcp://*:5556");
+    MyMainFrame *main = (MyMainFrame *)arg;
+    main->fSocket.bind("tcp://*:5556");
     std::cout << "hi" << std::endl;
     return 0;
 }
