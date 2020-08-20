@@ -1,11 +1,21 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+import argparse
 import serial, sys
 import time
 
+parser = argparse.ArgumentParser(description='Command line options.')
+parser.add_argument('--windows', action='store_true')
+args = parser.parse_args()
+
+if args.windows:
+    port_name = 'COM1'
+else:
+    port_name = '/dev/ttyUSB0'
+
 sr = serial.Serial(
-    port='COM1',
+    port=port_name,
     baudrate=115200,
     parity=serial.PARITY_NONE,
     bytesize=serial.EIGHTBITS,
