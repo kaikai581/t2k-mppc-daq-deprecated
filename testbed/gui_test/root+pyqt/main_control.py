@@ -7,7 +7,7 @@ import threading
 import zmq
 from N6700B import N6700B
 from PyQt5 import QtGui
-from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtWidgets import *
 
 # For a GUI application, the receiver needs to run in a separate thread for
@@ -32,9 +32,19 @@ class Window(QWidget):
         super(Window, self).__init__(parent)
 
         # zmq business
-        zmq_receiver = ZMQReceiver(self)
-        zmq_receiver.dataChanged.connect(self.on_data_changed)
-        zmq_receiver.start()
+        # zmq_receiver = ZMQReceiver(self)
+        # zmq_receiver.dataChanged.connect(self.on_data_changed)
+        # zmq_receiver.start()
+
+        # zmq timer implementation
+        context = zmq.Context()
+        self.socket = context.socket(zmq.PAIR)
+        self.socket.connect("tcp://localhost:5556")
+        self.poller = zmq.Poller()
+        self.poller.register(self.socket, zmq.POLLIN)
+        self.timerPoll = QTimer()
+        self.timerPoll.start(100)
+        self.timerPoll.timeout.connect(self.pollMsg)
 
         # widgets I want to have control
         self.voltageSwitch = QPushButton(text='Switch On')
@@ -42,7 +52,9 @@ class Window(QWidget):
         self.msgBox = QTextEdit()
         self.msgBox.setText('hi')
         # push button for sending message
+        self.editSendMsg = QLineEdit()
         self.btnSendMsg = QPushButton(text='Send')
+        self.btnSendMsg.clicked.connect(self.sendMsg)
 
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -74,7 +86,7 @@ class Window(QWidget):
         groupBox = QGroupBox('Send Message')
 
         grid = QGridLayout()
-        grid.addWidget(QLineEdit(), 0, 0)
+        grid.addWidget(self.editSendMsg, 0, 0)
         grid.addWidget(self.btnSendMsg, 0, 1)
 
         groupBox.setLayout(grid)
@@ -95,10 +107,22 @@ class Window(QWidget):
 
         return groupBox
     
-    @pyqtSlot(bytes)
-    def on_data_changed(self, buff):
-        text = '\n'.join([self.msgBox.toPlainText(), buff.decode('utf-8')])
-        self.msgBox.setText(text)
+    # @pyqtSlot(bytes)
+    # def on_data_changed(self, buff):
+    #     text = '\n'.join([self.msgBox.toPlainText(), buff.decode('utf-8')])
+    #     self.msgBox.setText(text)
+
+    def pollMsg(self):
+        socks = dict(self.poller.poll(0))
+        if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+            recv_msg = self.socket.recv()
+            message = self.msgBox.toPlainText() + '\n{}'.format(recv_msg.decode())
+            self.msgBox.setText(message)
+    
+    def sendMsg(self):
+        send_msg = self.editSendMsg.text()
+        print(send_msg)
+        self.socket.send_string(send_msg)
 
 
 if __name__ == '__main__':
