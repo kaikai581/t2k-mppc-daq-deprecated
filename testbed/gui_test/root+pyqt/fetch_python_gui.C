@@ -10,7 +10,7 @@
 #include <TPython.h>
 #include <TROOT.h>
 #include <TSystem.h>
-#include <TThread.h>
+// #include <TThread.h>
 #include <TVirtualX.h>
 #include <RQ_OBJECT.h>
 
@@ -122,7 +122,7 @@ private:
     TGMainFrame *fMain;
     TGTextEntry *edt_msg;
     TGTextEdit*  fMsgDisplay;
-    TThread*     fMsgThread;
+    // TThread*     fMsgThread;
     TTimer*      fTimerPoll;
 
     // zmq variables
@@ -136,18 +136,24 @@ public:
     virtual ~MyMainFrame();
     void FetchPyqtApp();
     void SendMessage();
-    static void* receiveFunction(void *arg);
+    // static void* receiveFunction(void *arg);
     void PollMessage();
 };
 
 MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
-    : fContext(1), fSocket(fContext, zmq::socket_type::pair), fMsgThread(0)
+    // : fContext(1), fSocket(fContext, zmq::socket_type::pair), fMsgThread(0)
+    : fContext(1), fSocket(fContext, zmq::socket_type::pair)
 {
     // zmq business
-    fSocket.bind("tcp://*:5556");
-    // fItem = { static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 };
-    fP.push_back({ static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 });
-    usleep(1000000);
+    try {
+        fSocket.bind("tcp://*:5556");
+        // fItem = { static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 };
+        fP.push_back({ static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 });
+    }
+    catch (...){
+        std::cout << "Socket related errors..." << std::endl;
+    }
+    // usleep(1000000);
 
     // zmq receiver setup
     // fMsgThread = new TThread("MsgThread", (void(*)(void*))&receiveFunction, (void*)this);
@@ -155,7 +161,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     // Instead of using thread, try timer instead.
     fTimerPoll = new TTimer();
     fTimerPoll->Connect("Timeout()", "MyMainFrame", this, "PollMessage()");
-    fTimerPoll->Start(2000, kFALSE);
+    fTimerPoll->Start(100, kFALSE);
 
     // Create a main frame
     fMain = new TGMainFrame(p, w, h);
@@ -235,7 +241,7 @@ void MyMainFrame::FetchPyqtApp()
 
 void MyMainFrame::PollMessage()
 {
-    std::cout << "hi" << std::endl;
+    // std::cout << "hi" << std::endl;
     zmq::message_t message;
     // zmq::pollitem_t items [] = {
     //     { static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 }
@@ -243,34 +249,39 @@ void MyMainFrame::PollMessage()
     // zmq::poll (fItem, 2, 0);
     // std::vector<zmq::pollitem_t> p = {{fSocket, 0, ZMQ_POLLIN, 0}};
     // zmq::poll (&items [0], 2, 0);
-    zmq::poll(fP.data(), 2, 1);
+    zmq::poll(fP.data(), 1, 0); // changed from zmq::poll(fP.data(), 2, 1); So far now segfault...
     
-    // if (fItem.revents & ZMQ_POLLIN) {
-    //     fSocket.recv(&message, ZMQ_DONTWAIT);
-    //     //  Process task
-    // }
-}
-
-void* MyMainFrame::receiveFunction(void* arg)
-{
-    MyMainFrame *main = (MyMainFrame *)arg;
-    // main->fSocket.bind("tcp://*:5556");
-    std::cout << "hi" << std::endl;
-
-    // start the receiver loop
-    while (true)
-    {
-        zmq::message_t request;
-        // main->fSocket.recv(&request);
-        // std::string rpl = std::string(static_cast<char*>(request.data()), request.size());
-        // main->fMsgDisplay->Clear();
-        // TGText txt;
-        // txt.LoadBuffer(rpl.c_str());
-        // main->fMsgDisplay->AddText(&txt);
+    if (fP[0].revents & ZMQ_POLLIN) {
+        zmq::recv_result_t rec_res = fSocket.recv(message, zmq::recv_flags::dontwait);
+        //  Process task
+        std::string rpl = std::string(static_cast<char*>(message.data()), message.size());
+        // std::cout << rpl << std::endl;
+        // fMsgDisplay->InsLine(fMsgDisplay->RowCount(), rpl.c_str());
+        fMsgDisplay->AddLine(rpl.c_str());
+        fMsgDisplay->Update();
     }
-
-    return 0;
 }
+
+// void* MyMainFrame::receiveFunction(void* arg)
+// {
+//     MyMainFrame *main = (MyMainFrame *)arg;
+//     // main->fSocket.bind("tcp://*:5556");
+//     std::cout << "hi" << std::endl;
+
+//     // start the receiver loop
+//     while (true)
+//     {
+//         zmq::message_t request;
+//         // main->fSocket.recv(&request);
+//         // std::string rpl = std::string(static_cast<char*>(request.data()), request.size());
+//         // main->fMsgDisplay->Clear();
+//         // TGText txt;
+//         // txt.LoadBuffer(rpl.c_str());
+//         // main->fMsgDisplay->AddText(&txt);
+//     }
+
+//     return 0;
+// }
 
 void MyMainFrame::SendMessage()
 {

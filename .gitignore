@@ -130,3 +130,8 @@ dmypy.json
 
 # VS Code configuration
 .vscode/
+
+# ROOT dictionary related files
+*.d
+*.pcm
+
