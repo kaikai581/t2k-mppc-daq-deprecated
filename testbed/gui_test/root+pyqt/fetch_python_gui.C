@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 #include <zmq.hpp>
 
 #include <TGButton.h>
@@ -122,10 +123,13 @@ private:
     TGTextEntry *edt_msg;
     TGTextEdit*  fMsgDisplay;
     TThread*     fMsgThread;
+    TTimer*      fTimerPoll;
 
     // zmq variables
     zmq::context_t fContext;
     zmq::socket_t fSocket;
+    // zmq::pollitem_t fItem;
+    std::vector<zmq::pollitem_t> fP;
 
 public:
     MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h);
@@ -133,6 +137,7 @@ public:
     void FetchPyqtApp();
     void SendMessage();
     static void* receiveFunction(void *arg);
+    void PollMessage();
 };
 
 MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
@@ -140,8 +145,17 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 {
     // zmq business
     fSocket.bind("tcp://*:5556");
-    fMsgThread = new TThread("MsgThread", (void(*)(void*))&receiveFunction, (void*)this);
-    fMsgThread->Run();
+    // fItem = { static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 };
+    fP.push_back({ static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 });
+    usleep(1000000);
+
+    // zmq receiver setup
+    // fMsgThread = new TThread("MsgThread", (void(*)(void*))&receiveFunction, (void*)this);
+    // fMsgThread->Run();
+    // Instead of using thread, try timer instead.
+    fTimerPoll = new TTimer();
+    fTimerPoll->Connect("Timeout()", "MyMainFrame", this, "PollMessage()");
+    fTimerPoll->Start(2000, kFALSE);
 
     // Create a main frame
     fMain = new TGMainFrame(p, w, h);
@@ -192,6 +206,8 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 
 MyMainFrame::~MyMainFrame()
 {
+    // flush the socket
+    fSocket.close();
     // Clean up used widgets: frames, buttons, layout hints
     fMain->Cleanup();
     delete fMain;
@@ -215,6 +231,24 @@ void MyMainFrame::FetchPyqtApp()
     // below is code to get terminal output
     TString s = gSystem->GetFromPipe("printenv | ack -i conda");
     // std::cout << s.Data() << std::endl;
+}
+
+void MyMainFrame::PollMessage()
+{
+    std::cout << "hi" << std::endl;
+    zmq::message_t message;
+    // zmq::pollitem_t items [] = {
+    //     { static_cast<void*>(fSocket), 0, ZMQ_POLLIN, 0 }
+    // };
+    // zmq::poll (fItem, 2, 0);
+    // std::vector<zmq::pollitem_t> p = {{fSocket, 0, ZMQ_POLLIN, 0}};
+    // zmq::poll (&items [0], 2, 0);
+    zmq::poll(fP.data(), 2, 1);
+    
+    // if (fItem.revents & ZMQ_POLLIN) {
+    //     fSocket.recv(&message, ZMQ_DONTWAIT);
+    //     //  Process task
+    // }
 }
 
 void* MyMainFrame::receiveFunction(void* arg)
